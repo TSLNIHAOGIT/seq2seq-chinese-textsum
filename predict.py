@@ -21,8 +21,13 @@ import tensorflow as tf
 
 import data_utils
 import seq2seq_model
-import eval
+# import eval#自己编写的eval模块缺失
 from headline import LargeConfig
+
+
+setattr(tf.contrib.rnn.GRUCell, '__deepcopy__', lambda self, _: self)
+setattr(tf.contrib.rnn.BasicLSTMCell, '__deepcopy__', lambda self, _: self)
+setattr(tf.contrib.rnn.MultiRNNCell, '__deepcopy__', lambda self, _: self)
 
 config = LargeConfig()          # new Large Config, 
 FLAGS = tf.app.flags.FLAGS      # Reuse the tf.app.flags from headline module
@@ -148,24 +153,29 @@ def generate_summary(input_dir, reference_dir, summary_dir):
     summary_file.write(line.decode('utf-8')) # write unicode to file
 
 def main(_):
+
+  #sys.argv是一个列表，获取外部参数，至少有一个参数0表示自身文件路径，外部运行程序时多多一个参数列表中就增加一个值
   if (len(sys.argv)==1):
     # 0 other args: type in news content interactively
     decode()
   
   else:
     # 3 other args: input_dir, reference_dir, summary_dir
+
+
     input_dir = sys.argv[1]
     reference_dir = sys.argv[2]
     summary_dir = sys.argv[3]
+
     print ('input_dir %s' % input_dir)
     print ('reference_dir %s' % reference_dir)
     print ('summary_dir %s' % summary_dir)
     
     generate_summary(input_dir, reference_dir, summary_dir)
     
-    #input_dir = os.path.join(FLAGS.data_dir,"test/content-test.txt")
-    #reference_dir = os.path.join(FLAGS.data_dir,"test/title-test.txt")
-    #summary_dir = os.path.join(FLAGS.data_dir,"test/summary.txt")
+    # input_dir = os.path.join(FLAGS.data_dir,"test/content-test.txt")
+    # reference_dir = os.path.join(FLAGS.data_dir,"test/title-test.txt")
+    # summary_dir = os.path.join(FLAGS.data_dir,"test/summary.txt")
 
 if __name__ == "__main__":
   tf.app.run()

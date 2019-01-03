@@ -26,7 +26,10 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
 import data_utils
-
+#
+# setattr(tf.contrib.rnn.GRUCell, '__deepcopy__', lambda self, _: self)
+# setattr(tf.contrib.rnn.BasicLSTMCell, '__deepcopy__', lambda self, _: self)
+# setattr(tf.contrib.rnn.MultiRNNCell, '__deepcopy__', lambda self, _: self)
 
 class Seq2SeqModel(object):
   """Sequence-to-sequence model with attention and for multiple buckets.

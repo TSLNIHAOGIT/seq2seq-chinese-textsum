@@ -29,10 +29,20 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import data_utils
 import seq2seq_model
+# import seq2seq_attn
 
-file_path = os.path.dirname(os.path.abspath(__file__))
-data_path = os.path.join(file_path, "news")
+#下面的三个setattr是自己加的为了解决cant thread 错误
+setattr(tf.contrib.rnn.GRUCell, '__deepcopy__', lambda self, _: self)
+setattr(tf.contrib.rnn.BasicLSTMCell, '__deepcopy__', lambda self, _: self)
+setattr(tf.contrib.rnn.MultiRNNCell, '__deepcopy__', lambda self, _: self)
+
+file_path = os.path.dirname(os.path.abspath(__file__))#输出工程所在的绝对路径
+# data_path = os.path.join(file_path, "news") #原来文件
+data_path = os.path.join(file_path, "data")
 train_dir = os.path.join(file_path, "ckpt")
+
+
+print('all path',file_path,'\n',data_path,'\n',train_dir)
 
 # We use a number of buckets and pad to the closest one for efficiency.
 # See seq2seq_model.Seq2SeqModel for details of how they work.
@@ -159,7 +169,7 @@ def create_model(session, forward_only):
   return model
 
 def train():
-  # Prepare Headline data.
+  # Prepare Headline data.# in /Users/ozintel/Downloads/Tsl_python_progect/local_ml/seq2seq-chinese-textsum/data
   print("Preparing Headline data in %s" % FLAGS.data_dir)
   src_train, dest_train, src_dev, dest_dev, _, _ = data_utils.prepare_headline_data(FLAGS.data_dir, FLAGS.vocab_size)
   gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
@@ -176,6 +186,8 @@ def train():
     print ("Reading development and training data (limit: %d)."
            % FLAGS.max_train_data_size)
     dev_set = read_data(src_dev, dest_dev)
+
+    #读取数据的时候，对decoder的末尾加了eos标记
     train_set = read_data(src_train, dest_train, FLAGS.max_train_data_size)
     #每个bucket有多少个句子(这里的句子已经向量化了)的list,如[21,43,56]
     train_bucket_sizes = [len(train_set[b]) for b in xrange(len(buckets))]
@@ -202,10 +214,11 @@ def train():
       # Get a batch and make a step.
       start_time = time.time()
 
+      #获取batch时，进行了pad和go的操作
       encoder_inputs, decoder_inputs, target_weights = model.get_batch(
           train_set, bucket_id)
       print('*'*80)
-      print(encoder_inputs)
+      print('encoder_inputs:\n',encoder_inputs)
       #在训练时，forward_only为Flase表示需要更新参数
       _, step_loss, _ = model.step(sess, encoder_inputs, decoder_inputs,
                                    target_weights, bucket_id, False)
@@ -232,6 +245,7 @@ def train():
         # Save checkpoint and zero timer and loss.
         checkpoint_path = os.path.join(FLAGS.train_dir, "headline_large.ckpt")
         model.saver.save(sess, checkpoint_path, global_step=model.global_step)
+        print('start save model')
         step_time, loss = 0.0, 0.0
         # Run evals on development set and print their perplexity.
         for bucket_id in xrange(len(buckets)):
@@ -253,3 +267,26 @@ def main(_):
 
 if __name__ == "__main__":
   tf.app.run()
+
+'''
+all path 
+
+ /Users/ozintel/Downloads/Tsl_python_progect/local_ml/seq2seq-chinese-textsum 
+ /Users/ozintel/Downloads/Tsl_python_progect/local_ml/seq2seq-chinese-textsum/data 
+ /Users/ozintel/Downloads/Tsl_python_progect/local_ml/seq2seq-chinese-textsum/ckpt
+Preparing Headline data in /Users/ozintel/Downloads/Tsl_python_progect/local_ml/seq2seq-chinese-textsum/data
+Creating vocabulary /Users/ozintel/Downloads/Tsl_python_progect/local_ml/seq2seq-chinese-textsum/data/vocab from data /Users/ozintel/Downloads/Tsl_python_progect/local_ml/seq2seq-chinese-textsum/data/train/content-train.txt
+Tokenizing data in /Users/ozintel/Downloads/Tsl_python_progect/local_ml/seq2seq-chinese-textsum/data/train/content-train.txt
+Tokenizing data in /Users/ozintel/Downloads/Tsl_python_progect/local_ml/seq2seq-chinese-textsum/data/train/title-train.txt
+Tokenizing data in /Users/ozintel/Downloads/Tsl_python_progect/local_ml/seq2seq-chinese-textsum/data/dev/content-train.txt
+Tokenizing data in /Users/ozintel/Downloads/Tsl_python_progect/local_ml/seq2seq-chinese-textsum/data/dev/title-train.txt
+Creating 4 layers of 256 units.
+'''
+
+'''
+只给出训练数据和测试数据即可，且只是分好词的和替换一些过后的，然后交给程序处理：如正则化，添加结束等分隔标志：
+content-train.txt、title-train.txt
+content-test.txt、title-test.txt
+
+
+'''
